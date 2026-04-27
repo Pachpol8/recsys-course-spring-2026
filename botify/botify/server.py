@@ -16,6 +16,7 @@ from botify.recommenders.i2i import I2IRecommender
 from botify.recommenders.random import Random
 from botify.recommenders.indexed import Indexed
 from botify.recommenders.sticky_artist import StickyArtist
+from botify.recommenders.session_gate_ranker import SessionGateRanker   # <-- ДОБАВЛЕН
 from botify.track import Catalog
 
 root = logging.getLogger()
@@ -74,6 +75,9 @@ sasrec_i2i_recommender = I2IRecommender(
     random_recommender,
 )
 
+# <-- ДОБАВЛЕНО: создаём экземпляр нового рекомендера
+session_gate_recommender = SessionGateRanker(sasrec_i2i_recommender, app.config)
+
 parser = reqparse.RequestParser()
 parser.add_argument("track", type=int, location="json", required=True)
 parser.add_argument("time", type=float, location="json", required=True)
@@ -114,10 +118,11 @@ class NextTrack(Resource):
 
         treatment = Experiments.HSTU.assign(user)
 
+        # <-- ИЗМЕНЁННЫЙ БЛОК: T1 теперь использует ваш рекомендер
         if treatment == Treatment.C:
             recommender = sasrec_i2i_recommender
         elif treatment == Treatment.T1:
-            recommender = Indexed(recommendations_hstu_redis.connection, catalog, random_recommender)
+            recommender = session_gate_recommender
         else:
             recommender = random_recommender
 
