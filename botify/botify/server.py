@@ -118,13 +118,13 @@ class NextTrack(Resource):
 
         treatment = Experiments.HSTU.assign(user)
 
-        # <-- ИЗМЕНЁННЫЙ БЛОК: T1 теперь использует ваш рекомендер
+      
         if treatment == Treatment.C:
             recommender = sasrec_i2i_recommender
         elif treatment == Treatment.T1:
-            recommender = session_gate_recommender
+            recommender = sasrec_i2i_recommender
         else:
-            recommender = random_recommender
+            recommender = sasrec_i2i_recommender
 
         recommendation = recommender.recommend_next(user, args.track, args.time)
 
