@@ -8,7 +8,7 @@ RUN pip install -r requirements.txt
 
 COPY botify ./botify
 COPY data ./data
-COPY data/session_gate_rf_bundle.joblib .
+COPY botify/botify/recommenders/session_gate_rf_bundle.joblib ./botify/botify/
 
 RUN mkdir -p ./log
 
