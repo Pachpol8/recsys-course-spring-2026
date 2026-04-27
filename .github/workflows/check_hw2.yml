@@ -86,6 +86,13 @@ jobs:
           cd student
           make setup
 
+            # 5. Первый запуск
+      - name: Run 1 — make setup
+        if: steps.structure.outcome == 'success'
+        run: |
+          cd student
+          make setup
+
       - name: Run 1 — make run
         id: run1
         if: steps.structure.outcome == 'success'
@@ -97,7 +104,12 @@ jobs:
             DATA_DIR="${{ github.workspace }}/results/run1"
         continue-on-error: true
 
-      # ── 6. Второй запуск (воспроизводимость) ─────────────────────────────
+      - name: Show recommender logs (run1)
+        if: always()
+        run: |
+          cd student/botify && docker compose logs recommender-1 recommender-2
+
+      # 6. Второй запуск
       - name: Run 2 — make clean
         if: steps.structure.outcome == 'success'
         run: |
@@ -120,6 +132,11 @@ jobs:
             EPISODES=30000 \
             DATA_DIR="${{ github.workspace }}/results/run2"
         continue-on-error: true
+
+      - name: Show recommender logs (run2)
+        if: always()
+        run: |
+          cd student/botify && docker compose logs recommender-1 recommender-2
 
       # ── 7. Проверка воспроизводимости ─────────────────────────────────────
       - name: Check reproducibility
