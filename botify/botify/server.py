@@ -16,7 +16,7 @@ from botify.recommenders.i2i import I2IRecommender
 from botify.recommenders.random import Random
 from botify.recommenders.indexed import Indexed
 from botify.recommenders.sticky_artist import StickyArtist
-from botify.recommenders.session_gate_ranker import SessionGateRanker   # <-- ДОБАВЛЕН
+from botify.recommenders.session_gate_ranker import SessionGateRanker
 from botify.track import Catalog
 import sys
 sys.stderr = sys.stdout
