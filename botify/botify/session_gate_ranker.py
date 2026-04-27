@@ -144,49 +144,52 @@ class SessionGateRanker(Recommender):
         ordered = [features[col] for col in self.feature_cols]
         return np.array(ordered)
 
-    def recommend_next(self, user: int, prev_track: int, prev_time: float) -> int:
-        """Основной метод, вызываемый сервером для получения следующего трека."""
-        if self.model is None:
-            logger.warning("Model not loaded, fallback to SasRec")
+   def recommend_next(self, user: int, prev_track: int, prev_time: float) -> int:
+    """Основной метод, вызываемый сервером для получения следующего трека."""
+    if self.model is None:
+        logger.warning("Model not loaded, fallback to SasRec")
+        return self.sasrec.recommend_next(user, prev_track, prev_time)
+
+    try:
+        history = self._get_user_history(user)
+        if len(history) < 1:
             return self.sasrec.recommend_next(user, prev_track, prev_time)
 
-        try:
-            history = self._get_user_history(user)
-            if len(history) < 1:
-                return self.sasrec.recommend_next(user, prev_track, prev_time)
+        # Базовая рекомендация SasRec (один трек, а не список!)
+        baseline_track = self.sasrec.recommend_next(user, prev_track, prev_time)
+        if baseline_track is None:
+            return prev_track
 
-            # Baseline рекомендации от SasRec
-            baseline_recs = self.sasrec.recommend_next(user, prev_track, prev_time)
-            if not baseline_recs:
-                return prev_track
+        # Кандидаты: соседи SasRec для последнего трека + популярные треки
+        neighbors = self._get_sasrec_neighbors(prev_track, 30)   # берём до 30 соседей
+        candidates = list(dict.fromkeys(neighbors[:20]))         # уникальные
+        for pt in self.popular_tracks[:10]:
+            if pt not in candidates and len(candidates) < 30:
+                candidates.append(pt)
+        if baseline_track not in candidates:
+            candidates.insert(0, baseline_track)
 
-            # Кандидаты: топ-20 SasRec + популярные треки (чтобы расширить пул)
-            candidates = baseline_recs[:20]
-            for pt in self.popular_tracks[:10]:
-                if pt not in candidates and len(candidates) < 30:
-                    candidates.append(pt)
+        # Оценка каждого кандидата моделью
+        scores = {}
+        for cand in candidates:
+            feats = self._build_features(history, prev_track, cand)
+            feats_scaled = self.scaler.transform([feats])
+            prob = self.model.predict_proba(feats_scaled)[0, 1]
+            scores[cand] = prob
 
-            # Оценка каждого кандидата моделью
-            scores = {}
-            for cand in candidates:
-                feats = self._build_features(history, prev_track, cand)
-                feats_scaled = self.scaler.transform([feats])
-                prob = self.model.predict_proba(feats_scaled)[0, 1]
-                scores[cand] = prob
+        best_candidate = max(scores, key=scores.get)
+        best_prob = scores[best_candidate]
+        first_prob = scores.get(baseline_track, best_prob)
 
-            best_candidate = max(scores, key=scores.get)
-            best_prob = scores[best_candidate]
-            first_candidate = baseline_recs[0]
-            first_prob = scores.get(first_candidate, best_prob)
+        # Консервативное правило замены
+        if (prev_time > self.min_prev_time and
+            best_prob > self.min_prob and
+            best_prob > first_prob + self.improvement_threshold):
+            logger.info(f"Replace {baseline_track} ({first_prob:.3f}) with {best_candidate} ({best_prob:.3f})")
+            return best_candidate
+        else:
+            return baseline_track
 
-            # Консервативное правило замены
-            if (prev_time > self.min_prev_time and
-                best_prob > self.min_prob and
-                best_prob > first_prob + self.improvement_threshold):
-                logger.info(f"Replace {first_candidate} ({first_prob:.3f}) with {best_candidate} ({best_prob:.3f})")
-                return best_candidate
-            else:
-                return first_candidate
-        except Exception as e:
-            logger.error(f"Error in recommend_next: {e}, fallback to SasRec")
-            return self.sasrec.recommend_next(user, prev_track, prev_time)
+    except Exception as e:
+        logger.error(f"Error in recommend_next: {e}, fallback to SasRec")
+        return self.sasrec.recommend_next(user, prev_track, prev_time)
