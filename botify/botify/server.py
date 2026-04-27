@@ -18,6 +18,8 @@ from botify.recommenders.indexed import Indexed
 from botify.recommenders.sticky_artist import StickyArtist
 from botify.recommenders.session_gate_ranker import SessionGateRanker   # <-- ДОБАВЛЕН
 from botify.track import Catalog
+import sys
+sys.stderr = sys.stdout
 
 root = logging.getLogger()
 root.setLevel("INFO")
