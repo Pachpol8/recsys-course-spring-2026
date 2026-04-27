@@ -16,7 +16,7 @@ from botify.recommenders.i2i import I2IRecommender
 from botify.recommenders.random import Random
 from botify.recommenders.indexed import Indexed
 from botify.recommenders.sticky_artist import StickyArtist
-#from botify.recommenders.session_gate_ranker import SessionGateRanker   # <-- ДОБАВЛЕН
+from botify.recommenders.session_gate_ranker import SessionGateRanker   # <-- ДОБАВЛЕН
 from botify.track import Catalog
 
 root = logging.getLogger()
@@ -75,8 +75,8 @@ sasrec_i2i_recommender = I2IRecommender(
     random_recommender,
 )
 
-# <-- ДОБАВЛЕНО: создаём экземпляр нового рекомендера
-#session_gate_recommender = SessionGateRanker(sasrec_i2i_recommender, app.config)
+#создаём экземпляр нового рекомендера
+session_gate_recommender = SessionGateRanker(sasrec_i2i_recommender, app.config)
 
 parser = reqparse.RequestParser()
 parser.add_argument("track", type=int, location="json", required=True)
