@@ -99,8 +99,7 @@ class SessionGateRanker(Recommender):
         hist_len = len(history)
 
         same_as_prev = 1.0 if cand == prev_track else 0.0
-        popularity = 0.0   # можно заменить на реальную частоту, но для простоты 0
-
+        popularity = 0.0   
         # SasRec признаки (по каждому из последних window треков)
         sasrec_ranks = []
         sasrec_rr = []
