@@ -103,11 +103,26 @@ jobs:
             EPISODES=30000 \
             DATA_DIR="${{ github.workspace }}/results/run1"
         continue-on-error: true
+      - name: Show full logs
+        if: always()
+        run: cd student/botify && docker compose logs --no-color
+      - name: Check botify health
+        if: always()
+        run: |
+          cd student/botify
+          docker compose ps
+          curl -v http://localhost:5001/ || echo "Curl failed"
 
       - name: Show recommender logs (run1)
         if: always()
         run: |
           cd student/botify && docker compose logs recommender-1 recommender-2
+      - name: Check botify health
+        if: always()
+        run: |
+          cd student/botify
+          docker compose ps
+          curl -v http://localhost:5001/ || echo "Curl failed"
 
       # 6. Второй запуск
       - name: Run 2 — make clean
