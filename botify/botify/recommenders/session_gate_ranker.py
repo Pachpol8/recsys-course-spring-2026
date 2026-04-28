@@ -19,13 +19,12 @@ class SessionGateRanker(Recommender):
     def __init__(self, sasrec_recommender, config):
         self.sasrec = sasrec_recommender
         self.config = config
-
-        # Путь к модели (относительно этого файла)
+# Путь к модели
+    model_path = "/app/session_gate_rf_bundle.joblib"
+    if not os.path.exists(model_path):
         model_path = os.path.join(os.path.dirname(__file__), "../../session_gate_rf_bundle.joblib")
-        if not os.path.exists(model_path):
-            model_path = "/app/botify/botify/session_gate_rf_bundle.joblib"
-        if not os.path.exists(model_path):
-            model_path = "/app/session_gate_rf_bundle.joblib"
+    if not os.path.exists(model_path):
+        raise FileNotFoundError(f"Model not found at {model_path}")
 
         logger.info(f"Loading model from {model_path}")
         bundle = joblib.load(model_path)
