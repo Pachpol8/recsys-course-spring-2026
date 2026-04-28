@@ -5,5 +5,7 @@ python-json-logger==2.0.2
 mmh3==3.0.0
 gevent
 gunicorn
-scikit-learn
+scikit-learn==1.0.2
 joblib>=1.1.0
+numpy==1.21.6
+scipy==1.7.3
