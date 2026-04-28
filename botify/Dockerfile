@@ -9,8 +9,7 @@ RUN pip install -r requirements.txt
 COPY botify ./botify
 COPY data ./data
 
-COPY botify/botify/recommenders/session_gate_rf_bundle.joblib ./botify/botify/
-
+COPY session_gate_rf_bundle.joblib .
 RUN mkdir -p ./log
 
 ENV PYTHONPATH "${PYTHONPATH}:/app"
