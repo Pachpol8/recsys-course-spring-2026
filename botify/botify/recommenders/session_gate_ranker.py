@@ -42,7 +42,7 @@ class SessionGateRanker(Recommender):
         self.improvement_threshold = 0.15
         self.min_prob = 0.55
 
-    def recommend_next(self, user, prev_track, prev_time) -> int:
+   def recommend_next(self, user, prev_track, prev_time) -> int:
     """Возвращает ОДИН валидный track ID из каталога (max ID = 16197)"""
     try:
         if self.model is None or self.scaler is None:
@@ -119,14 +119,6 @@ class SessionGateRanker(Recommender):
                 for t in fallback:
                     if isinstance(t, (int, float)) and 0 < t <= 16197:
                         return int(t)
-        except Exception as e:
-        logger.error(f"Error in recommend_next: {e}", exc_info=True)
-        try:
-            fallback = self.sasrec.recommend_next(user, prev_track, prev_time)
-            if fallback:
-                for t in fallback:
-                    if isinstance(t, (int, float)) and 0 < t <= 16197:
-                        return int(t)
-      except:
+        except:
             pass
         return 100
