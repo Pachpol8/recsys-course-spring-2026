@@ -46,17 +46,21 @@ class SessionGateRanker(Recommender):
         self.min_prob = 0.50
 
     def _valid_track(self, track):
-        return isinstance(track, (int, float)) and 0 < int(track) <= 16197
+        return isinstance(track, (int, float)) and 1 <= int(track) <= 16197
 
     def recommend_next(self, user, prev_track, prev_time) -> int:
         try:
             baseline_recs = self.sasrec.recommend_next(user, prev_track, prev_time)
             if not baseline_recs:
-                return int(prev_track) + 1 if prev_track else 100
+                return 1
 
             valid_baseline = [int(t) for t in baseline_recs if self._valid_track(t)]
             if not valid_baseline:
-                return int(prev_track) + 1 if prev_track else 100
+                # Если все baseline невалидные, используйте первый baseline без валидации
+                if baseline_recs and self._valid_track(baseline_recs[0]):
+                    return int(baseline_recs[0])
+                # Если baseline сожран, верните любой валидный трек (например 1)
+                return 1
 
             candidates = valid_baseline[:10]
             if len(candidates) < 3:
@@ -121,6 +125,7 @@ class SessionGateRanker(Recommender):
                     for t in fallback:
                         if self._valid_track(t):
                             return int(t)
+                    return int(fallback[0]) if self._valid_track(fallback[0]) else 1
             except Exception:
                 pass
-            return int(prev_track) + 1 if prev_track else 100
+            return 1
