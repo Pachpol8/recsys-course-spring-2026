@@ -1,6 +1,6 @@
 """
-Session-aware RandomForest reranker.
-Uses SasRec as candidate generator and RandomForest as a mild reranker.
+Simple RandomForest reranker.
+Always returns the best candidate according to RandomForest model.
 """
 import os
 import logging
@@ -41,10 +41,6 @@ class SessionGateRanker(Recommender):
         self.params = bundle.get("params", {})
         self.popular_tracks = bundle.get("popular_tracks", [])
 
-        self.min_prev_time = 0.5
-        self.improvement_threshold = 0.05
-        self.min_prob = 0.50
-
     def _valid_track(self, track):
         return isinstance(track, (int, float)) and 1 <= int(track) <= 16197
 
@@ -56,21 +52,23 @@ class SessionGateRanker(Recommender):
 
             valid_baseline = [int(t) for t in baseline_recs if self._valid_track(t)]
             if not valid_baseline:
-                # Если все baseline невалидные, используйте первый baseline без валидации
-                if baseline_recs and self._valid_track(baseline_recs[0]):
-                    return int(baseline_recs[0])
-                # Если baseline сожран, верните любой валидный трек (например 1)
                 return 1
 
-            candidates = valid_baseline[:10]
-            if len(candidates) < 3:
-                candidates = valid_baseline[:min(20, len(valid_baseline))]
+            # Берём топ-15 кандидатов для переоценки
+            candidates = valid_baseline[:15]
 
-            scores = {}
+            # Если модель не загрузилась, возвращаем baseline
+            if self.model is None or self.scaler is None:
+                return int(candidates[0])
+
+            # Оцениваем всех кандидатов через RandomForest
+            best_cand = None
+            best_prob = -1
+
             for cand in candidates:
-                rank = float(valid_baseline.index(cand) + 1) if cand in valid_baseline else 99.0
-                rr = 1.0 / rank if cand in valid_baseline and rank > 0 else 0.0
-                hit = 1.0 if cand in valid_baseline else 0.0
+                rank = float(candidates.index(cand) + 1)
+                rr = 1.0 / rank if rank > 0 else 0.0
+                hit = 1.0
                 is_popular = 1.0 if cand in self.popular_tracks[:20] else 0.0
                 popular_rank = float(self.popular_tracks.index(cand) + 1) if cand in self.popular_tracks else 99.0
 
@@ -98,24 +96,15 @@ class SessionGateRanker(Recommender):
                 feats = [feats_dict[col] for col in self.feature_cols]
                 feats_scaled = self.scaler.transform([feats])
                 prob = self.model.predict_proba(feats_scaled)[0, 1]
-                scores[cand] = prob
 
-            if not scores:
-                return int(valid_baseline[0])
+                if prob > best_prob:
+                    best_prob = prob
+                    best_cand = cand
 
-            best_cand = max(scores, key=scores.get)
-            best_prob = scores[best_cand]
-            first_cand = valid_baseline[0]
-            first_prob = scores.get(first_cand, best_prob)
-
-            if (
-                prev_time > self.min_prev_time
-                and best_prob > self.min_prob
-                and best_prob > first_prob + self.improvement_threshold
-            ):
+            if best_cand is not None:
                 return int(best_cand)
 
-            return int(first_cand)
+            return int(candidates[0])
 
         except Exception as e:
             logger.error(f"Error in recommend_next: {e}", exc_info=True)
@@ -125,7 +114,6 @@ class SessionGateRanker(Recommender):
                     for t in fallback:
                         if self._valid_track(t):
                             return int(t)
-                    return int(fallback[0]) if self._valid_track(fallback[0]) else 1
             except Exception:
                 pass
             return 1
